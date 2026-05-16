@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>InvestKing - מערכת מעקב מניות חכמה</title>
+    <meta name="description" content="InvestKing - מערכת מעקב וניתוח מניות מבוססת בינה מלאכותית">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { assistant: ['Assistant', 'sans-serif'] }
+                }
+            }
+        }
+    </script>
+    <style>
+        * { font-family: 'Assistant', sans-serif; }
+        body { background: #0f172a; }
+        .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(71, 85, 105, 0.3); }
+        .glow-green { box-shadow: 0 0 20px rgba(34,197,94,0.2); }
+        .glow-yellow { box-shadow: 0 0 20px rgba(234,179,8,0.2); }
+        .glow-red { box-shadow: 0 0 20px rgba(239,68,68,0.2); }
+        .score-badge { width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1.1rem; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+        .fade-in { animation: fadeIn 0.4s ease-out; }
+        @keyframes pulse-ring { 0% { box-shadow: 0 0 0 0 rgba(99,102,241,0.4); } 70% { box-shadow: 0 0 0 10px rgba(99,102,241,0); } 100% { box-shadow: 0 0 0 0 rgba(99,102,241,0); } }
+        .pulse-ring { animation: pulse-ring 2s infinite; }
+        .spinner { border: 3px solid rgba(255,255,255,0.1); border-top: 3px solid #818cf8; border-radius: 50%; width: 20px; height: 20px; animation: spin 0.8s linear infinite; display: inline-block; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .modal-overlay { background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #1e293b; }
+        ::-webkit-scrollbar-thumb { background: #475569; border-radius: 3px; }
+        .analysis-content p { margin-bottom: 0.5rem; }
+        .analysis-content ul, .analysis-content ol { padding-right: 1.2rem; margin-bottom: 0.5rem; }
+        .analysis-content li { margin-bottom: 0.25rem; }
+        .analysis-content strong, .analysis-content b { color: #a5b4fc; }
+    </style>
+</head>
+<body class="min-h-screen text-slate-200">
+
+<!-- Header -->
+<header class="border-b border-slate-700/50 bg-slate-900/80 sticky top-0 z-30 backdrop-blur-md">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg">
+                <i class="fa-solid fa-crown text-white text-lg"></i>
+            </div>
+            <div>
+                <h1 class="text-xl font-bold bg-gradient-to-l from-indigo-400 to-purple-400 bg-clip-text text-transparent">InvestKing</h1>
+                <p class="text-xs text-slate-500 -mt-0.5">מערכת מעקב מניות חכמה</p>
+            </div>
+        </div>
+        <button id="btnSettings" onclick="openSettings()" class="flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 transition-all text-sm">
+            <i class="fa-solid fa-gear text-slate-400"></i>
+            <span class="hidden sm:inline">הגדרות API</span>
+        </button>
+    </div>
+</header>
+
+<main class="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-8">
+
+    <!-- Average Score Card -->
+    <div id="avgCard" class="hidden fade-in">
+        <div id="avgCardInner" class="glass rounded-2xl p-6 flex items-center justify-between">
+            <div>
+                <p class="text-sm text-slate-400 mb-1"><i class="fa-solid fa-chart-line ml-1"></i> ציון ממוצע לתיק</p>
+                <p id="avgScoreValue" class="text-4xl font-extrabold">0</p>
+                <p id="avgScoreLabel" class="text-sm mt-1 text-slate-400"></p>
+            </div>
+            <div id="avgScoreBadge" class="w-20 h-20 rounded-full flex items-center justify-center text-3xl font-extrabold border-4">
+                0
+            </div>
+        </div>
+    </div>
+
+    <!-- Input Section -->
+    <div class="glass rounded-2xl p-6">
+        <div class="flex flex-col sm:flex-row gap-3">
+            <div class="relative flex-1">
+                <i class="fa-solid fa-magnifying-glass-dollar absolute right-4 top-1/2 -translate-y-1/2 text-slate-500"></i>
+                <input id="tickerInput" type="text" placeholder="הזן סימול מניה (לדוגמה: AAPL)" class="w-full pr-12 pl-4 py-3 rounded-xl bg-slate-900 border border-slate-700 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none transition text-base placeholder:text-slate-600" dir="ltr" style="text-align:left">
+            </div>
+            <button id="btnAnalyze" onclick="analyzeStock()" class="px-8 py-3 rounded-xl bg-gradient-to-l from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 font-semibold transition-all shadow-lg shadow-indigo-500/20 flex items-center justify-center gap-2 text-base whitespace-nowrap">
+                <i class="fa-solid fa-wand-magic-sparkles"></i>
+                נתח מניה
+            </button>
+        </div>
+        <p id="errorMsg" class="text-red-400 text-sm mt-3 hidden"></p>
+    </div>
+
+    <!-- Table -->
+    <div id="tableContainer" class="hidden fade-in">
+        <div class="glass rounded-2xl overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="border-b border-slate-700/50 bg-slate-800/50">
+                            <th class="px-5 py-4 text-right font-semibold text-slate-300">סימול</th>
+                            <th class="px-5 py-4 text-right font-semibold text-slate-300">מחיר נוכחי</th>
+                            <th class="px-5 py-4 text-right font-semibold text-slate-300">מכפיל רווח (P/E)</th>
+                            <th class="px-5 py-4 text-right font-semibold text-slate-300">שווי שוק</th>
+                            <th class="px-5 py-4 text-right font-semibold text-slate-300">ציון AI</th>
+                            <th class="px-5 py-4 text-right font-semibold text-slate-300">פעולות</th>
+                        </tr>
+                    </thead>
+                    <tbody id="stocksBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Empty State -->
+    <div id="emptyState" class="flex flex-col items-center justify-center py-20 text-center">
+        <div class="w-20 h-20 rounded-full bg-slate-800 flex items-center justify-center mb-5">
+            <i class="fa-solid fa-chart-pie text-3xl text-slate-600"></i>
+        </div>
+        <p class="text-slate-500 text-lg">הזן סימול מניה כדי להתחיל</p>
+        <p class="text-slate-600 text-sm mt-1">הניתוח כולל נתונים פיננסיים + חוות דעת AI</p>
+    </div>
+</main>
+
+<!-- Settings Modal -->
+<div id="settingsModal" class="fixed inset-0 z-50 hidden items-center justify-center modal-overlay">
+    <div class="bg-slate-800 rounded-2xl p-6 w-full max-w-md mx-4 border border-slate-700 shadow-2xl fade-in">
+        <div class="flex items-center justify-between mb-6">
+            <h2 class="text-lg font-bold"><i class="fa-solid fa-key ml-2 text-indigo-400"></i>הגדרות API</h2>
+            <button onclick="closeSettings()" class="w-8 h-8 rounded-lg hover:bg-slate-700 flex items-center justify-center transition"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="space-y-4">
+            <div>
+                <label class="block text-sm text-slate-400 mb-1.5">RapidAPI Key</label>
+                <input id="steadyKeyInput" type="password" placeholder="הזן את מפתח RapidAPI" class="w-full px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-700 focus:border-indigo-500 outline-none transition text-sm" dir="ltr">
+            </div>
+            <div>
+                <label class="block text-sm text-slate-400 mb-1.5">Gemini API Key</label>
+                <input id="geminiKeyInput" type="password" placeholder="הזן את מפתח Gemini" class="w-full px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-700 focus:border-indigo-500 outline-none transition text-sm" dir="ltr">
+            </div>
+        </div>
+        <button onclick="saveKeys()" class="w-full mt-6 py-3 rounded-xl bg-gradient-to-l from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 font-semibold transition-all text-sm">
+            <i class="fa-solid fa-floppy-disk ml-1"></i> שמור מפתחות
+        </button>
+        <p id="settingsMsg" class="text-center text-sm mt-3 hidden"></p>
+    </div>
+</div>
+
+<!-- Analysis Modal -->
+<div id="analysisModal" class="fixed inset-0 z-50 hidden items-center justify-center modal-overlay">
+    <div class="bg-slate-800 rounded-2xl p-6 w-full max-w-2xl mx-4 border border-slate-700 shadow-2xl fade-in max-h-[85vh] flex flex-col">
+        <div class="flex items-center justify-between mb-4">
+            <h2 id="analysisTitle" class="text-lg font-bold"><i class="fa-solid fa-robot ml-2 text-purple-400"></i>ניתוח AI</h2>
+            <button onclick="closeAnalysis()" class="w-8 h-8 rounded-lg hover:bg-slate-700 flex items-center justify-center transition"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div id="analysisBody" class="overflow-y-auto flex-1 text-slate-300 leading-relaxed analysis-content text-sm"></div>
+    </div>
+</div>
+
+<script>
+// ==================== State ====================
+const stocks = [];
+
+// ==================== Helpers ====================
+function getKey(name) { return localStorage.getItem(name) || ''; }
+function setKey(name, val) { localStorage.setItem(name, val); }
+function showError(msg) {
+    const el = document.getElementById('errorMsg');
+    el.textContent = msg; el.classList.remove('hidden');
+    setTimeout(() => el.classList.add('hidden'), 5000);
+}
+function formatMarketCap(val) {
+    if (!val || isNaN(val)) return 'N/A';
+    if (val >= 1e12) return (val / 1e12).toFixed(2) + 'T';
+    if (val >= 1e9) return (val / 1e9).toFixed(2) + 'B';
+    if (val >= 1e6) return (val / 1e6).toFixed(2) + 'M';
+    return val.toLocaleString();
+}
+function extractVal(obj, ...paths) {
+    for (const path of paths) {
+        const keys = path.split('.');
+        let v = obj;
+        for (const k of keys) { v = v?.[k]; }
+        const raw = v?.raw ?? v?.fmt ?? v;
+        if (raw !== undefined && raw !== null && raw !== 'N/A') return raw;
+    }
+    return null;
+}
+function getScoreColor(score) {
+    if (score >= 7) return { bg: 'bg-emerald-500/20', text: 'text-emerald-400', border: 'border-emerald-500', glow: 'glow-green' };
+    if (score >= 4) return { bg: 'bg-yellow-500/20', text: 'text-yellow-400', border: 'border-yellow-500', glow: 'glow-yellow' };
+    return { bg: 'bg-red-500/20', text: 'text-red-400', border: 'border-red-500', glow: 'glow-red' };
+}
+
+// ==================== Settings Modal ====================
+function openSettings() {
+    document.getElementById('steadyKeyInput').value = getKey('steadyApiKey');
+    document.getElementById('geminiKeyInput').value = getKey('geminiApiKey');
+    document.getElementById('settingsMsg').classList.add('hidden');
+    const m = document.getElementById('settingsModal');
+    m.classList.remove('hidden'); m.classList.add('flex');
+}
+function closeSettings() {
+    const m = document.getElementById('settingsModal');
+    m.classList.add('hidden'); m.classList.remove('flex');
+}
+function saveKeys() {
+    const s = document.getElementById('steadyKeyInput').value.trim();
+    const g = document.getElementById('geminiKeyInput').value.trim();
+    if (!s || !g) {
+        const msg = document.getElementById('settingsMsg');
+        msg.textContent = 'נא למלא את שני המפתחות'; msg.className = 'text-center text-sm mt-3 text-red-400';
+        return;
+    }
+    setKey('steadyApiKey', s); setKey('geminiApiKey', g);
+    const msg = document.getElementById('settingsMsg');
+    msg.textContent = '✓ המפתחות נשמרו בהצלחה'; msg.className = 'text-center text-sm mt-3 text-emerald-400';
+    setTimeout(() => closeSettings(), 1200);
+}
+
+// ==================== Analysis Modal ====================
+function openAnalysis(idx) {
+    const stock = stocks[idx];
+    if (!stock) return;
+    document.getElementById('analysisTitle').innerHTML = `<i class="fa-solid fa-robot ml-2 text-purple-400"></i>ניתוח AI עבור ${stock.symbol}`;
+    document.getElementById('analysisBody').innerHTML = stock.analysis.replace(/\n/g, '<br>');
+    const m = document.getElementById('analysisModal');
+    m.classList.remove('hidden'); m.classList.add('flex');
+}
+function closeAnalysis() {
+    const m = document.getElementById('analysisModal');
+    m.classList.add('hidden'); m.classList.remove('flex');
+}
+
+// ==================== Update Average ====================
+function updateAverage() {
+    const scored = stocks.filter(s => s.score !== null);
+    if (scored.length === 0) { document.getElementById('avgCard').classList.add('hidden'); return; }
+
+    document.getElementById('avgCard').classList.remove('hidden');
+    const avg = scored.reduce((a, s) => a + s.score, 0) / scored.length;
+    const rounded = avg.toFixed(1);
+    const c = getScoreColor(avg);
+
+    document.getElementById('avgScoreValue').textContent = rounded;
+    document.getElementById('avgScoreValue').className = `text-4xl font-extrabold ${c.text}`;
+    document.getElementById('avgScoreBadge').textContent = rounded;
+    document.getElementById('avgScoreBadge').className = `w-20 h-20 rounded-full flex items-center justify-center text-3xl font-extrabold border-4 ${c.border} ${c.text} ${c.bg}`;
+    document.getElementById('avgCardInner').className = `glass rounded-2xl p-6 flex items-center justify-between ${c.glow}`;
+
+    const label = avg >= 7 ? 'תיק חזק 💪' : avg >= 4 ? 'תיק סביר ⚖️' : 'תיק בסיכון ⚠️';
+    document.getElementById('avgScoreLabel').textContent = label;
+}
+
+// ==================== Render Table ====================
+function renderTable() {
+    const body = document.getElementById('stocksBody');
+    body.innerHTML = '';
+
+    if (stocks.length === 0) {
+        document.getElementById('tableContainer').classList.add('hidden');
+        document.getElementById('emptyState').classList.remove('hidden');
+        updateAverage();
+        return;
+    }
+
+    document.getElementById('tableContainer').classList.remove('hidden');
+    document.getElementById('emptyState').classList.add('hidden');
+
+    stocks.forEach((stock, idx) => {
+        const c = stock.score !== null ? getScoreColor(stock.score) : { bg: 'bg-slate-700/30', text: 'text-slate-400', border: 'border-slate-600' };
+        const scoreHtml = stock.score !== null
+            ? `<div class="score-badge ${c.bg} ${c.text} border-2 ${c.border}">${stock.score}</div>`
+            : (stock.loading ? `<div class="spinner"></div>` : `<span class="text-slate-500">—</span>`);
+
+        const actionBtn = stock.analysis
+            ? `<button onclick="openAnalysis(${idx})" class="px-3 py-1.5 rounded-lg bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 transition text-xs font-medium whitespace-nowrap"><i class="fa-solid fa-eye ml-1"></i>הצג ניתוח</button>`
+            : (stock.loading ? `<span class="text-slate-500 text-xs">מנתח...</span>` : '');
+
+        const row = document.createElement('tr');
+        row.className = 'border-b border-slate-700/30 hover:bg-slate-700/20 transition fade-in';
+        row.innerHTML = `
+            <td class="px-5 py-4">
+                <div class="flex items-center gap-2">
+                    <span class="font-bold text-white text-base" dir="ltr">${stock.symbol}</span>
+                </div>
+            </td>
+            <td class="px-5 py-4 font-medium text-slate-200" dir="ltr" style="text-align:right">$${stock.price}</td>
+            <td class="px-5 py-4 text-slate-300" dir="ltr" style="text-align:right">${stock.pe}</td>
+            <td class="px-5 py-4 text-slate-300" dir="ltr" style="text-align:right">$${stock.marketCap}</td>
+            <td class="px-5 py-4">${scoreHtml}</td>
+            <td class="px-5 py-4">${actionBtn}
+                <button onclick="removeStock(${idx})" class="px-2 py-1.5 rounded-lg hover:bg-red-500/20 text-red-400/60 hover:text-red-400 transition text-xs mr-1" title="הסר"><i class="fa-solid fa-trash-can"></i></button>
+            </td>`;
+        body.appendChild(row);
+    });
+
+    updateAverage();
+}
+
+function removeStock(idx) {
+    stocks.splice(idx, 1);
+    renderTable();
+}
+
+// ==================== Main Flow ====================
+async function analyzeStock() {
+    const ticker = document.getElementById('tickerInput').value.trim().toUpperCase();
+    if (!ticker) { showError('נא להזין סימול מניה'); return; }
+    if (stocks.some(s => s.symbol === ticker)) { showError('מניה זו כבר קיימת בטבלה'); return; }
+
+    const steadyKey = getKey('steadyApiKey');
+    const geminiKey = getKey('geminiApiKey');
+    if (!steadyKey || !geminiKey) { showError('נא להגדיר מפתחות API בהגדרות'); openSettings(); return; }
+
+    // Add placeholder row
+    const idx = stocks.length;
+    stocks.push({ symbol: ticker, price: '...', pe: '...', marketCap: '...', score: null, analysis: '', loading: true });
+    document.getElementById('tickerInput').value = '';
+    renderTable();
+
+    try {
+        // Step 1: Fetch from RapidAPI (Yahoo Finance)
+        const res = await fetch(`https://yahoo-finance15.p.rapidapi.com/api/v1/markets/stock/quotes?ticker=${encodeURIComponent(ticker)}`, {
+            method: 'GET',
+            headers: {
+                'x-rapidapi-key': steadyKey,
+                'x-rapidapi-host': 'yahoo-finance15.p.rapidapi.com',
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (!res.ok) {
+            const errText = await res.text().catch(() => '');
+            throw new Error(`RapidAPI error ${res.status}: ${errText || res.statusText}`);
+        }
+
+        const data = await res.json();
+
+        // Extract financial data - handle both array response and object response
+        const stockData = Array.isArray(data?.body) ? data.body.find(s => s.symbol === ticker) || data.body[0] : (data?.body || data);
+
+        const price = stockData?.regularMarketPrice ?? stockData?.currentPrice ?? extractVal(data, 'financialData.currentPrice', 'summaryDetail.previousClose', 'price.regularMarketPrice');
+        const pe = stockData?.trailingPE ?? stockData?.epsTrailingTwelveMonths ? (price / stockData.epsTrailingTwelveMonths) : extractVal(data, 'summaryDetail.trailingPE');
+        const mc = stockData?.marketCap ?? extractVal(data, 'price.marketCap', 'summaryDetail.marketCap');
+
+        stocks[idx].price = price !== null && price !== undefined ? Number(price).toFixed(2) : 'N/A';
+        stocks[idx].pe = pe !== null && pe !== undefined && !isNaN(pe) ? Number(pe).toFixed(2) : 'N/A';
+        stocks[idx].marketCap = mc !== null && mc !== undefined ? formatMarketCap(Number(mc)) : 'N/A';
+        renderTable();
+
+        // Step 2: Send to Gemini
+        const prompt = `אתה אנליסט פיננסי מומחה. נתח את נתוני המניה הבאים בעברית.
+
+ציין:
+1. תיאור קצר של החברה
+2. נקודות חוזק עיקריות (3-5 נקודות)
+3. סיכונים עיקריים (3-5 נקודות)
+4. סיכום והמלצה
+
+בסוף התשובה, תן ציון מספרי מ-1 עד 10 (1=מסוכן מאוד, 10=מצוין) בפורמט הבא בדיוק:
+SCORE: X
+
+הנתונים הגולמיים:
+${JSON.stringify(data)}`;
+
+        const geminiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+        });
+
+        if (!geminiRes.ok) {
+            const errText = await geminiRes.text().catch(() => '');
+            throw new Error(`Gemini API error ${geminiRes.status}: ${errText || geminiRes.statusText}`);
+        }
+
+        const geminiData = await geminiRes.json();
+        const analysisText = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+
+        // Extract score via regex
+        const scoreMatch = analysisText.match(/SCORE:\s*(\d+(?:\.\d+)?)/i);
+        const score = scoreMatch ? Math.min(10, Math.max(1, parseFloat(scoreMatch[1]))) : null;
+
+        stocks[idx].analysis = analysisText.replace(/SCORE:\s*\d+(?:\.\d+)?/i, '').trim();
+        stocks[idx].score = score !== null ? Math.round(score) : null;
+        stocks[idx].loading = false;
+
+    } catch (err) {
+        console.error('Analysis error:', err);
+        stocks[idx].loading = false;
+        stocks[idx].analysis = `שגיאה בניתוח: ${err.message}`;
+        showError(`שגיאה: ${err.message}`);
+    }
+
+    renderTable();
+}
+
+// ==================== Keyboard Shortcut ====================
+document.getElementById('tickerInput').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') analyzeStock();
+});
+
+// Close modals on backdrop click
+document.getElementById('settingsModal').addEventListener('click', (e) => { if (e.target === e.currentTarget) closeSettings(); });
+document.getElementById('analysisModal').addEventListener('click', (e) => { if (e.target === e.currentTarget) closeAnalysis(); });
+
+// Close modals on Escape
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') { closeSettings(); closeAnalysis(); }
+});
+
+// Initial render
+renderTable();
+</script>
+
+</body>
+</html>
