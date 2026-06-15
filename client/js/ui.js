@@ -216,22 +216,25 @@ var UI = (function() {
   }
 
   function updateHUD(data) {
-    var hBar = document.getElementById('bar-health');
-    var fBar = document.getElementById('bar-food');
+    var hBar  = document.getElementById('bar-health');
+    var fBar  = document.getElementById('bar-food');
     var tokEl = document.getElementById('hud-tokens');
     var xpEl  = document.getElementById('hud-xp');
+    var spEl  = document.getElementById('hud-spec');
 
-    if (hBar) hBar.style.width = Math.max(0, Math.min(100, data.health)) + '%';
-    if (fBar) fBar.style.width = Math.max(0, Math.min(100, data.food)) + '%';
-    if (tokEl) tokEl.textContent = Math.floor(data.tokens);
-    if (xpEl)  xpEl.textContent = data.jobXp || 0;
-
-    // Color the health bar
     if (hBar) {
+      hBar.style.width = Math.max(0, Math.min(100, data.health)) + '%';
       hBar.style.background = data.health > 50 ? '#2ecc71' : data.health > 25 ? '#f39c12' : '#e74c3c';
     }
     if (fBar) {
+      fBar.style.width = Math.max(0, Math.min(100, data.food)) + '%';
       fBar.style.background = data.food > 50 ? '#f39c12' : data.food > 25 ? '#e67e22' : '#c0392b';
+    }
+    if (tokEl) tokEl.textContent = Math.floor(data.tokens || 0);
+    if (xpEl)  xpEl.textContent  = data.jobXp || 0;
+    if (spEl && data.specialization && data.specialization !== 'NONE') {
+      var spec = CFG.SPECS.find(function(s) { return s.id === data.specialization; });
+      spEl.textContent = spec ? (spec.icon + ' ' + spec.name) : data.specialization;
     }
   }
 

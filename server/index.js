@@ -3,8 +3,9 @@ const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
 
-const { createLobby, joinLobby, leaveLobby, startGame, socketToPlayer } = require('./lobby');
+const { createLobby, joinLobby, leaveLobby, startGame, socketToPlayer, playerToSocket } = require('./lobby');
 const { handlePlayerReady, handlePlayerMove, handleDisconnect } = require('./gameState');
+const { startJob, cancelJob, buyFood, tickJobs } = require('./jobs');
 
 const app = express();
 const server = http.createServer(app);
@@ -40,15 +41,37 @@ io.on('connection', (socket) => {
     handlePlayerMove(socket, data, io);
   });
 
+  socket.on('start_job', (data) => {
+    try { startJob(socket, data, io); }
+    catch (e) { console.error('start_job:', e); }
+  });
+
+  socket.on('cancel_job', () => {
+    try { cancelJob(socket); }
+    catch (e) { console.error('cancel_job:', e); }
+  });
+
+  socket.on('buy_food', (data) => {
+    try { buyFood(socket, data); }
+    catch (e) { console.error('buy_food:', e); }
+  });
+
   socket.on('disconnect', () => {
     console.log(`[-] ${socket.id}`);
     const info = socketToPlayer.get(socket.id);
     if (info) {
+      cancelJob(socket);
       handleDisconnect(socket, info.lobbyCode, info.playerId, io);
       leaveLobby(socket, io);
     }
   });
 });
+
+// Job completion ticker — runs every 500ms
+setInterval(() => {
+  try { tickJobs(io, playerToSocket); }
+  catch (e) { console.error('tickJobs:', e); }
+}, 500);
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => console.log(`AgarCity running on http://localhost:${PORT}`));

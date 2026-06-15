@@ -58,4 +58,21 @@ var CFG = {
     12: '#5d4037',  // house
     13: '#00695c',  // shop
   },
+
+  JOB_ZONES: [
+    { id:'business1', spec:'BUSINESS',     label:'Bank Office',       x:1040, y:1040, radius:90, duration:60, reward:12, xp:5 },
+    { id:'arts1',     spec:'ARTS',         label:'Art Gallery',       x:528,  y:1040, radius:90, duration:50, reward:8,  xp:4 },
+    { id:'tech1',     spec:'TECH',         label:'Tech Office',       x:528,  y:528,  radius:90, duration:60, reward:15, xp:5 },
+    { id:'food1',     spec:'FOOD_SERVICE', label:'Restaurant Row',    x:1552, y:528,  radius:90, duration:45, reward:10, xp:4 },
+    { id:'medical1',  spec:'MEDICAL',      label:'City Hospital',     x:1552, y:96,   radius:90, duration:60, reward:12, xp:5 },
+    { id:'trades1',   spec:'TRADES',       label:'Construction Site', x:96,   y:1040, radius:90, duration:45, reward:10, xp:4 },
+    { id:'shop1',     spec:'ANY',          label:'General Store',     x:1040, y:528,  radius:90, duration:45, reward:8,  xp:3 },
+  ],
+
+  FOOD_STORES: [
+    { id:'store1', name:'Corner Store', x:900,  y:800,  radius:70, cost:5, restore:30 },
+    { id:'store2', name:'Food Cart',    x:660,  y:1040, radius:70, cost:3, restore:20 },
+    { id:'store3', name:'Diner',        x:1380, y:800,  radius:70, cost:8, restore:50 },
+    { id:'store4', name:'Mini Mart',    x:1040, y:1280, radius:70, cost:5, restore:30 },
+  ],
 };

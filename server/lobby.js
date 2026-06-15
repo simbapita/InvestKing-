@@ -162,4 +162,4 @@ function getLobbyBySocket(socketId) {
   return { lobby: lobbies.get(info.lobbyCode), playerId: info.playerId };
 }
 
-module.exports = { createLobby, joinLobby, leaveLobby, startGame, getLobbyBySocket, socketToPlayer };
+module.exports = { createLobby, joinLobby, leaveLobby, startGame, getLobbyBySocket, socketToPlayer, playerToSocket };
